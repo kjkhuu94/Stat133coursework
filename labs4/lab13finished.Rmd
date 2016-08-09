@@ -1,0 +1,98 @@
+---
+title: "lab13"
+author: "Kevin Khuu"
+date: "June 27, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      fig.width = 5,
+                      fig.asp = 0.62,
+                      message = FALSE)
+```
+
+```{r, include = FALSE}
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(stringr)
+tents <- read_csv("tents.csv")
+```
+# Instructions
+In this lab, you'll be working with the `tents` dataset included in this folder.  You may use any of the packages that we've covered in class so far.  You'll need to start by reading in the data with `read_csv` from `readr` of course.
+
+## Histograms and Densities
+1.  Create a histogram of tent prices.  You'll need the `geom_histogram()` geometry.
+```{r}
+ggplot(tents,aes(price))+geom_histogram()
+```
+
+2.  Adjust the binwidth to 50 with the `binwidth` argument of `geom_histogram()`.
+```{r}
+ggplot(tents,aes(price))+geom_histogram(binwidth = 50)
+```
+
+3.  Add a density estimate layer to your plot in number 2 using `geom_density()`.  You'll need map `..density..` to the y aesthetic for this to work.
+```{r}
+ggplot(tents,aes(price,y=..density..))+geom_histogram(binwidth=50)+geom_density()
+```
+
+4.  Generate a density `price`, colored by `bestuse`.  You'll probably want a fixed alpha value of 0.5.
+```{r}
+ggplot(tents,aes(price,y=..density..))+geom_density(aes(fill=bestuse,alpha=0.5))
+```
+
+
+## Boxplots
+1.  Generate a bar chart of with the counts of `brands`. `geom_bar`.
+```{r}
+ggplot(tents,aes(brand))+geom_bar()
+```
+
+
+2.  Modify the code from number 1 to add color for the brands.
+```{r}
+ggplot(tents,aes(x=brand,color=brand,fill=brand))+geom_bar()
+```
+
+
+
+3.  Create a bar chart of `brand` colored by `bestuse`.
+```{r}
+ggplot(tents,aes(x=brand,color=bestuse,fill=bestuse))+geom_bar()
+```
+
+---
+
+## Scatter Plots
+
+1.  Create a scatter plot of `height` vs. `weight`.  Color and shape the points by `bestuse`. 
+```{r}
+ggplot(tents,aes(height,weight,color=bestuse,shape=bestuse))+geom_point()
+```
+
+2.  Add a line of best fit under the points using `geom_smooth`.  Use `method = "lm"` to produce a line rather than a polynomial.  Change `se` to `FALSE` to remove the confidence regions.  Lastly, change the color of the line to `grey75`.
+
+```{r}
+ggplot(tents,aes(height,weight))+geom_point(aes(color=bestuse,shape=bestuse))+geom_smooth(method="lm", se = FALSE,color="grey75")
+```
+
+## Faceting
+
+Create a scatter plots of `weight` vs `price`.  Facet wrap by `capacity`.  Color by `brand`.
+```{r}
+ggplot(tents)+geom_point(aes(weight,price,color=brand))+facet_wrap(~capacity)
+```
+
+## In conjunction with wrangling
+
+Try to reproduce the graph below, titles and all.  You'll need to wrangle the data some.  The size of the points is 1.5, and the color of the line-of-best-fit is grey75.
+
+```{r}
+poop<-as.integer(str_extract(tents$capacity,"[0-9]"))
+tents<-mutate(tents,Weight_to_Capacity_Ratio=weight/poop)
+tents<- filter(tents,bestuse=="Backpacking"|bestuse=="Carcamping")
+ggplot(tents, aes(Weight_to_Capacity_Ratio,price))+xlab("Weight-to-Capacity Ratio(g/person)")+ylab("Price(USD)")+geom_point(aes(color=brand),size=1.5)+facet_wrap(~bestuse)+geom_smooth(method="lm",se= FALSE, color="grey75")
+```
+

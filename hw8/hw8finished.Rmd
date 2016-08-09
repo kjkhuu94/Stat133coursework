@@ -1,0 +1,135 @@
+---
+title: "hw8"
+author: "Due: 11:59pm Saturday 8/6/2016.  Instructors stop answering questions at 5pm."
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+library(dplyr)
+library(ggplot2)
+library(animation)
+solutions<-readRDS("hw8_sql_results.rds")
+library(nycflights13)
+library(purrr)
+library(tidyr)
+```
+
+### purrr
+
+In this exercise, you'll be using functional programming ideas to simulate the central limit theorem on coin flips.  Using neither loops nor the apply functions, write a simulation pipeline that:
+
+* Generates 1000 samples of each 1, 2, ..., 99, 100 fair coin flips.  So for example, you would simulate flipping 1 coins 1000 times, 2 coins 1000 times, etc.
+* For each of the 1, 2, ..., 100 flips, produces a histogram of the proportion of heads.  To be explicit: you will create a histogram for the 1000 proportions calculated from the 1 coin flips.  Then you'll do the same for 2 coin flips, 3, etc.
+
+In your plots
+* The x-axis should be limited to 0-1
+* The y-axis should be limited to 0-15
+
+
+```{r, eval = FALSE}
+individual_flip = function(x) {
+  s = sample(c(1.00,0.00), size = x, replace = TRUE, prob = c(0.5,0.5))
+  prop = sum(s)/x
+  return(prop)
+}
+
+num_of_flips <- 1:100
+results <- num_of_flips %>% map(function(x) rerun(1000,individual_flip(x)))
+
+
+plot_flips <- function(i) {
+  coin <- as.data.frame(results[[i]]) %>%
+    gather(key = Count,
+           value = Proportion) %>% 
+    mutate(count = c(1:1000))
+  
+  ggplot(coin) +
+    aes(x = Proportion, y = ..density..) +
+    geom_histogram(bins = 30) +
+    labs(x = "Proportion of Heads",
+         y = "Density",
+         title = "Distribution of Heads") +
+    scale_x_discrete(limits = c(0,1))+
+    scale_y_continuous(limits = c(0,15)) 
+    
+}
+
+num_of_flips %>% map(plot_flips)
+```
+
+Now that you have all the static images, you could "animate" the progression by turning the sequence of images into a gif.  This can be achieved with the `animation` package in R or the standalone `ImageMagick` utility.  This is just an FYI, we will not be looking for a GIF.  Also, Please do NOT upload the images to GitHub nor bCourses.  We'll just be checking your code.
+
+## SQL
+
+These exercises are meant to help you wrap your head around SQL.  Answer the questions below using SQL queries.  You can check your answer using `dplyr` methods, but your grade will be based on the SQL commands.  The `nycflights13` data set has been put into a SQLlite database for these problems.  For documentation about the variable names, see
+
+```{r, eval = FALSE}
+help(package = "nycflights13")
+```
+
+```{r}
+flights <- src_sqlite("nycflights13.mysqlite3")
+
+```
+
+
+1. Find the full name of each airline that flew to Dallas Fort-Worth (DFW).
+```{r}
+flights %>% tbl(sql("
+  SELECT DISTINCT
+    name AS Airline_Name
+  FROM 
+    nyairlines JOIN nyflights
+    ON nyairlines.carrier= nyflights.carrier
+  WHERE 
+    dest GLOB 'DFW'
+                    ")) %>% 
+  collect(n=Inf)
+```
+
+2. Make a table containing the tail number, year of manufacture, model, number of engines, and number of seats of the planes flown by United Airlines (UA).  Sort the results by year manufactured.
+
+```{r}
+flights %>% tbl(sql("
+  SELECT 
+      DISTINCT nyplanes.tailnum AS tailnum,
+      nyplanes.year AS year,
+      model,
+      engines,
+      seats
+  FROM nyplanes INNER JOIN nyflights
+    ON nyplanes.tailnum = nyflights.tailnum
+  WHERE carrier GLOB 'UA'
+  ORDER BY year,model
+")) %>% collect(n=Inf)
+```
+
+3. Make a table with the following information: full airport name in a column called `Airport` and number of flights from New York City to those airports in 2013 in a column called `NumberOfFlights`.  Sort the results in descending order by flight counts.
+```{r}
+flights %>% tbl(sql("
+    SELECT nyairports.name as Airport,
+      COUNT(*) as NumberOfFlights
+    FROM nyflights JOIN nyairports
+    ON nyflights.dest = nyairports.faa 
+    GROUP BY Airport
+    ORDER BY
+      NumberOfFlights DESC
+"))%>% 
+  collect(n=Inf)
+```
+
+4. Find the wind speed during the hour of the sceduled departure time of every flight that had a departure delay of more than 30 minutes.  For example, if a flight was scheduled to leave at 5:59am, you would check the wind speed for 5:00am.  In practice, you would of course be more careful than this.
+```{r}
+flights %>% tbl(sql("
+    SELECT  wind_speed, nyflights.hour ,nyflights.time_hour
+    FROM nyflights JOIN nyweather
+    ON nyflights.time_hour=nyweather.time_hour 
+      AND nyflights.origin=nyweather.origin
+    WHERE dep_delay>30
+")) %>% 
+  collect(n=Inf)
+```
+
+
+

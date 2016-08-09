@@ -1,0 +1,150 @@
+---
+title: "lab9"
+author: "Kevin Khuu"
+date: "June 21, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Libraries
+
+The following libraries are allowed for this lab.  They have already been loaded in this document.
+
+* `stringr`
+* `dplyr`
+* `tidyr`
+
+```{r, include = FALSE}
+library(stringr)
+library(dplyr)
+library(tidyr)
+```
+
+
+## Our Glorious Foundation
+
+The vector pioneers has already been created for you
+```{r}
+pioneers <- c("GAUSS:1777", "BAYES:1702", "NEYMAN:1894", "LAPLACE:1749")
+```
+
+1.  Review: Split the names from the birth years using `str_split`, discarding the colon.  Assign the output to the variable `split_pioneers`.
+```{r}
+split_pioneers=str_split(pioneers,":")
+split_pioneers
+```
+
+2.  What class is the output object?
+```{r}
+class(split_pioneers)
+```
+IT IS ZE LIST. THIS IS A MODERN MAJOR GENERAL OF LISTS.I've been told that I'm neurotic.
+
+3.  Without writing a loop, convert the strings to first-letter uppercase only.  Hint: `str_to_upper` is actually part of a family of functions.  Getting the documentation on it will reveal other functions like it.  Assign the output to the variable `statisticians`
+```{r}
+statisticians=lapply(split_pioneers, str_to_title)
+statisticians
+```
+
+4.  Try running `rbind` on statisticians.  What happens?
+```{r}
+rbind(statisticians)
+```
+It creates a bizarre 1x4 matrix with vector elements.
+
+5.  Using `do.call`, construct an `rbind` call that will turn the list into a matrix, `pioneers_df`
+```{r}
+pioneers_df<- do.call(rbind, statisticians)
+```
+
+6.  Review: Convert the matrix into a data frame and name the columns `name` and `byear`.  Hint: `as...`
+```{r}
+pioneers_df<- as.data.frame(pioneers_df)
+names(pioneers_df)<- c("name","byear")
+pioneers_df
+```
+
+7.  Review: Convert the column types of `name` and `byear` to character and integer, respectively.  Hint: Subset and `as...` 
+```{r}
+pioneers_df$name<- as.character(pioneers_df$name)
+pioneers_df$byear<-as.integer(pioneers_df$byear)
+lapply(pioneers_df,class)
+```
+
+## Narcotics
+
+The `sleep` dataset (built into R---no need to load anything) shows the effect of soporific (increases in sleep) drugs as compared to a control group.  There are two drugs represented in the data, as denoted by the group number.  The ID number is unique to each patient.
+
+1.  Use `tapply` to find the average change in sleep hours for each of the drugs.
+```{r}
+with(sleep, tapply(extra,group,mean,na.rm=T))
+```
+
+2.  Use `lapply` and an anonymous function to split the data frame into 10 2x3 sub-data frames grouped by ID.  Assign the output to `split_sleep`.  This is just practice thinking about `lapply` since you could actually just use this call in practice:
+```{r, eval = F}
+split(sleep, sleep$ID)
+```
+
+Hint: The first argument of `lapply` can be `1:10`.
+```{r}
+split_sleep=lapply(1:10,function(x) sleep[sleep$ID == x,])
+```
+
+3.  Use `vapply` on `split_sleep` to calculate the difference in extra sleep (group 2 - group 1) for each patient.  Hint: You can be a little fancy here and use `with` as your `FUN`.  Remember to give `vapply` a suitable template vector.
+```{r}
+vapply(split_sleep,with,numeric(1),extra[group==2]-extra[group==1])
+```
+
+## Look Me in the Iris
+
+Iris is a rather famous data set introduced by Ronald Fisher in his paper _The use of multiple measurements in taxonomic problems_ as an example of classification by dividing the data using (hyper)-planes.  It is already pre-loaded into `R` under `iris` (no package needed) and is often used as an example dataset in documentation.  I suggest inspecting the data set before continuing.
+
+Use the data wrangling verbs of `dplyr` in conjunction with the piping operator `%>%` to do the following tasks.  Your output should be data frames assigned to the names in bold.
+
+1.  Get only the sepal and petal length columns of the data frame.  __iris_len__
+```{r}
+iris_len__<- select(iris, Sepal.Length,Petal.Length)
+```
+2.  Get every column of the data frame besides Petal length and width.  Do not call on the other three columns by their names.  __no_petal__
+```{r}
+no_petal__<- select(iris,-Petal.Length,-Petal.Width)
+```
+3.  Get only the species column, renaming it `species_name`.  __species__
+```{r}
+species__<- select(iris,species_name=Species)
+```
+4.  Create a column called `length_sum` that contains the sum of the petal and sepal lengths.  __add_length__
+```{r}
+add_length__<- mutate(iris,length_sum=Petal.Length+Sepal.Length)
+```
+5.  Get only the rows of the data frame where the species is `setosa`. __only_setosa__
+```{r}
+only_setosa__<- filter(iris,Species=="setosa")
+```
+6.  Get only the rows of the data frame where the species name contains exactly 4 vowels and the sum of the sepal length and width is less than 8.  __nonsense_filter__
+```{r}
+#vowel_check=str_count("{AEIOUaeiou]")==4
+#iris$Species[which(vowel_check)]
+#filter(iris, Sepal.Length+Sepal.Width<8)
+#nonsense_filter=filter(iris, Species[which(vowel_check)],Sepal.Length+Sepal.Width<8)
+```
+7.  Get the average sepal width `avg_sw` and average sepal length `avg_sl` for each of the 3 species.  __sepal_avg_by_species__
+```{r}
+sepal_avg_by_species__=iris %>%
+  group_by(Species) %>% 
+  summarise(avg_sw=mean(Sepal.Width),avg_sl=mean(Sepal.Length))
+```
+8.  Overwrite the `Sepal.Width` column so that it reads `"wide"` if the width is greater than 3 and `"narrow"` otherwise.  Do the same for `Sepal.Length` except the threshold is 5.5 and the replacement is `"long"` and `"short"`.  The `ifelse` command might be useful.  __factorized__
+```{r}
+factorized__=mutate(iris, Sepal.Width=ifelse(Sepal.Width>3,"wide","narrow"),Sepal.Length=ifelse(Sepal.Length>5.5,"long","short"))
+```
+9.  Count how many of each wide-long, wide-short, narrow-long, and narrow-short pairs there are.  Hint: `group_by` followed by `tally` or `summarise`.  __sepal_counts__
+```{r}
+sepal_counts=factorized__ %>% 
+  group_by(Sepal.Width,Sepal.Length) %>% 
+  tally()
+```
+

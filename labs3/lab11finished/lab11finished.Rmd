@@ -1,0 +1,105 @@
+---
+title: "lab11"
+author: "Andrew Do"
+date: "June 23, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Packages
+The following packages are allowed for this lab:
+
+* `dplyr`
+* `tidyr`
+* `stringr`
+* `readr`
+* `lubridate`
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(readr)
+library(lubridate)
+```
+
+## Billboards Continued
+
+Load the billboard data.  Perform the following tasks/answer the following questions:
+
+1.  Gather the week columns
+```{r}
+billboard=read.csv("billboard.csv")
+tidy_billboard <- billboard %>%
+  gather(week, rank, -year,-time, -artist.inverted, -track, -time, -genre,
+         -date.entered, - date.peaked)
+head(tidy_billboard,5)
+
+```
+
+2.  Change the week data into integer values (e.g. x1st.week into 1)
+```{r}
+tidy_billboard<- mutate(tidy_billboard, week=str_match_all(week,"[0-9]+"))
+head(tidy_billboard,5)
+```
+
+3.  Which day of the week are the rankings updated?  Are there any exceptions?
+```{r}
+d_child=ymd("2000-11-18")
+class(wday(d_child))
+weekday_update<-as.character(wday(tidy_billboard$date.entered))
+all(str_detect(weekday_update,"[^7]"))
+```
+Saturday. No exceptions.
+
+4.  Add the week data of the actual dates depicting the day the song's rank was updated.  For example, Destiny's Child's Independent Women Part I went from rank 78 to 63 in its second week of being on the billboard, so its week data should be `2000-09-23` and `2000-09-30`, respectively. Hint: `mutate` using the day the track hit the billboard 
+and something else.
+
+```{r}
+tidy_billboard<- mutate(tidy_billboard,week_data=ymd(date.entered)+days(as.integer(week)-1)*7)
+head(tidy_billboard,5)
+```
+
+5.  Use intervals to find how many weeks Destiny's Child's Jumpin' Jumpin' and Independent Woman Part 1 were on the billboard together.
+
+```{r}
+Jumpin_Jumpin=filter(tidy_billboard,track=="Jumpin' Jumpin'")
+Jumpin_Jumpin<- na.omit(Jumpin_Jumpin)
+Jumpin_Jumpin_end_date=Jumpin_Jumpin$week_data[nrow(Jumpin_Jumpin)]
+Jumpin_Jumpin_Overlap<- Jumpin_Jumpin$week_data[1]%--% Jumpin_Jumpin_end_date
+Independent_Women<- filter(tidy_billboard,track=="Independent Women Part I")
+Independent_Women<- na.omit(Independent_Women)
+Independent_Women_end_date=Independent_Women$week_data[nrow(Independent_Women)]
+Independent_Women_Overlap<-Independent_Women$week_data[1] %--%Independent_Women_end_date
+D_child_intersect<-intersect(Jumpin_Jumpin_Overlap,Independent_Women_Overlap)
+D_child_intersect%/%weeks(1)
+```
+
+6.  Review: Clean the artist column: If the artist's name is written as `last, first`, then change the format to `first last`.
+
+```{r}
+tidy_billboard<- mutate(tidy_billboard,artist.inverted=sub('^(.*), (.*)', '\\2 \\1', artist.inverted))
+head(tidy_billboard$artist,5)
+billboard<-mutate(billboard,artist.inverted=sub('^(.*), (.*)', '\\2 \\1', artist.inverted))
+```
+
+7.  Perhaps the single data frame model for tidy data creates too many duplicate data cells (for example, the artist data is really redundant!).  Create two data frames.  The first data frame, `songs`, you should have the variables `artist`, `track`, `year`, and `time`.  In addition, you should create a new variable `song_id`, which is unique to each song (you can choose how you want to assign IDs).  In the second data frame, `rankings`, you should have the following variables:
+  * `song_id` - same as in `songs`
+  * `date` - the day the ranking was updated
+  * `week` - the number of weeks the song has been on the billboard by that date
+  * `rank` - the song's rank on that date.
+`song_id` should be the only variable in common between the two tables and should allow you to cross-reference the information.
+
+```{r}
+songs<- select(billboard,artist=artist.inverted,track,year,time)
+songs=mutate(songs, song_id=1:nrow(songs))
+rankings<- select(tidy_billboard,date=week_data,rank)
+repeat_times=nrow(rankings)%/%nrow(songs)
+song_id_vector=songs$song_id
+rankings<-mutate(rankings,id=(rep(song_id_vector,repeat_times)))
+rankings<- na.omit(mutate(rankings,week=(tidy_billboard$date.entered%--%date)%/%weeks(1)))
+```
+

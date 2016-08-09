@@ -1,0 +1,145 @@
+---
+title: "Working on the SCF Cluster"
+author: "Andrew Do"
+date: "July 11, 2016"
+output: 
+  html_document:
+    css: "../style.css"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+source("../markdown_styles.R")
+```
+
+## Signing up for an SCF account
+
+### Fields
+This sign-up tutorial will reference the following things.  The angle brackets are not literal, so please do not keep them there when going through the instructions.
+
+Field            | Value
+---------------- | ------------------------------------------------------------------------------------
+`<login>`        | the account login name on the signup form.  This will not change
+`<tmp_pw>`       | the password printed on the signup form.  You will pick a new password during set-up.
+`<password>`     | the new password that you chose during the set-up
+`<ugNN>`         | the ugNN number printed at your table
+`<server>`       | one of the statistics computing servers
+
+### Creating the Account
+
+Open up terminal/cygwin and log into your new account with:
+
+<pre class="code">
+ssh `r hilite1("<login>")`@`r lolite1("<ugNN>")`.berkeley.edu
+</pre>
+
+For example if your account sheet says `Account login name: s133-144` and the ugNN on your table says `ugNN: scf-ug01` then you would run
+
+<pre class="code">
+ssh `r hilite1("s133-144")`@`r lolite1("scf-ug01")`.berkeley.edu
+</pre>
+
+If it says something like:
+```
+The authenticity of host 'scf-ug01.berkeley.edu (128.32.135.63)' can't be established...
+Are you sure you want to continue connecting (yes/no)?
+```
+You can just say `yes` to continue connecting.  The server will then prompt you to input a password.  You should put in the `<tmp_pw>`.  Follow the instructions to change your password.  This will be your permanent new password. Don't forget it!
+
+## Logging into an SCF server
+
+The keyboard shortcut for logging off a remote connection is `CTRL+D` or `CMD+D`.  You should see your connection change in your prompt.  You see your prompt change from something like
+
+```{sh, eval = FALSE}
+scf-ug01.stat133-150$ 
+```
+to 
+
+```{sh, eval = FALSE}
+YourAccount@YourMachine ~
+```
+The command for remote login is `ssh`, which stands for Secure SHell.  For the rest of the semester, you'll have access to the statistic department computing servers.  On the server, you'll be provided access to some storage space and permissions to run code.
+
+The department has several servers available for use: `arwen`, `gandalf`, `beren`, `roo`, and `treebeard` are a few of them.  To log into a server, run
+
+<pre class="code">
+ssh `r hilite1("<login>")`@`r lolite1("<server>")`.berkeley.edu
+</pre>
+
+### Take a look around
+
+The SCF servers are linux-based, meaning all of our UNIX command line tools will work.  Use `ls` and `cd` to look around and answer the following questions:
+
+1. What folders are there in your home directory? `~`?
+2. Run `~`.  What is the absolute path to your home directory?
+
+Go to the `Documents` folder.
+
+## Copying files to and from the server
+Recall that the command to copy files from one place to a new directory on your machine is `cp`.
+```{sh, eval = FALSE}
+cp <path_to_file> <target_directory>
+```
+The analogous command to copy a file from your computer to a server or vice-versa is `scp`
+```{sh, eval = FALSE}
+scp <path_to_file> <target_directory>
+```
+The difference is that you have to specify a connection if you want to target a folder on the server.  __Remember that the file name only appears in the first argument!__ For example, if I want to copy `example.R` in the `Documents` folder of my own machine to my `Documents` folder on the `gandalf` server, I would run:
+
+<pre class="code">
+scp `r paste0(hilite1("~/Documents/"), lolite1("example.R"))` `r paste0(hilite2("do@gandalf.berkeley.edu:"), lolite2("~/Documents"))`
+</pre>
+
+Similarly, to copy `example.R` in the `Documents` folder on the server back to my `Documents` folder, I would run:
+<pre class="code">
+scp `r paste0(hilite2("do@gandalf.berkeley.edu:"), lolite2("~/Documents/"), lolite1("example.R"))` `r hilite1("~/Documents/")` 
+</pre>
+
+Thus to specify a location on the server, the syntax is (no spaces):
+
+<pre class="code">
+`r paste0(hilite1("<login>"), "@", lolite1("<server>"), ".berkeley.edu:", suplite("<path_on_server>"))`
+</pre>
+
+__IMPORTANT:__ You must run `scp` in a terminal/cygwin window __that is not connected to the server__.
+
+### Task
+
+1. Open up `evaluator.R` and change the the values to match your name and birthday (make up a birthday if you must).
+2. Copy `evaluator.R` to `~/Documents/lab18` on the server.  You'll need to make the lab18 folder.
+
+## Running an R script in the command line
+
+Running an `R` file in the command line is incredibly easy. To run a script you simply type:
+
+<pre class="code">
+Rscript `r suplite("<name_of_R_file>")`
+</pre>
+
+For example, if I wanted to run `foo.R` on my computer from the command line, I would simply type
+
+<pre class="code">
+Rscript `r suplite("foo.R")`
+</pre>
+
+Now on the server, you are sharing computing resources with other people.  To respect the people using the servers for research scripts, we should submit our jobs in the low priority queue.  After copying a file to the server and logging into the server, you submit a low priority request to run your Rscript using:
+
+<pre class="code">
+nice Rscript `r suplite("<name_of_R_file>")` &
+</pre>
+
+`nice` submits your command in the low priority queue and the `&` runs the command in the background, letting you continue other work even while the script is being run.
+
+### Task
+
+1.  Run the `evaluator.R` script that you copied earlier __on the server__.  It should produce an `evaluator.rda` file.
+2.  Copy `evaluator.rda` from the server to your lab folder for this week (`labs6`).
+3.  Submit `evaluator.rda` onto bCourses.  It will be the only file you submit for this lab.
+
+You can check out the contents of `evaluator.rda` by running `load("evaluator.rda")` in the `R` console.  It's proof of when and where you ran the `evaluator.R` file.
+
+## FYI: Git
+
+`git` is installed on the server, meaning that you can clone your repos onto the server and then work, push, and pull from there as well! It will require that you are comfortable using UNIX command line tools to navigate and manipulate files, but it's an alternative to using `scp` to transfer files back and forth: you push from your computer to github, pull from github onto the server, run the script on the server, push the results to github, then pull from github on your computer.
+

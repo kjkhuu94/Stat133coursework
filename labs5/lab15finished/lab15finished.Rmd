@@ -1,0 +1,259 @@
+---
+title: "lab15"
+author: "Kevin Khuu"
+date: "July 4, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(xml2)
+```
+
+## Example of Checking Work
+The best way to deal with the `xml` data is to copy and paste it into a plain-text editor and save it as a `.xml` file.  Windows users, it's highly suggested you either use a Cygwin utility like nano or download Notepad++ rather than use Notepad.  I've saved the following data into `weather.xml` in the lab folder:
+
+```{r, eval = FALSE}
+<?xml version="1.0" encoding="UTF-8"?>
+<current_observation>
+
+<credit>NOAA's National Weather Service</credit>
+<credit_URL>http://weather.gov/</credit_URL>
+
+<image>
+  <url>http://weather.gov/images/xml_logo.gif</url>
+  <title>NOAA's National Weather Service</title>
+  <link>http://weather.gov</link>
+</image>
+
+<location>New York/John F. Kennedy Intl Airport, NY</location>
+<station_id>KJFK</station_id>
+<latitude>40.66</latitude>
+<longitude>-73.78</longitude>
+<observation_time_rfc822>Mon, 11 Feb 2008 06:51:00 -0500 EST
+</observation_time_rfc822>
+
+<weather>A Few Clouds</weather>
+<temp_f>11</temp_f>
+<temp_c>-12</temp_c>
+<relative_humidity>36</relative_humidity>
+<wind_dir>West</wind_dir>
+<wind_degrees>280</wind_degrees>
+<wind_mph>18.4</wind_mph>
+<wind_gust_mph>29</wind_gust_mph>
+<pressure_mb>1023.6</pressure_mb>
+<pressure_in>30.23</pressure_in>
+<dewpoint_f>-11</dewpoint_f>
+<dewpoint_c>-24</dewpoint_c>
+<windchill_f>-7</windchill_f>
+<windchill_c>-22</windchill_c>
+<visibility_mi>10.00</visibility_mi>
+
+<icon_url_base>http://weather.gov/weather/images/fcicons/</icon_url_base>
+<icon_url_name>nfew.jpg</icon_url_name>
+<disclaimer_url>http://weather.gov/disclaimer.html</disclaimer_url>
+<copyright_url>http://weather.gov/disclaimer.html</copyright_url>
+
+</current_observation>
+```
+
+To read the data, we'll need `read_xml()` from the `xml2` package.
+```{r}
+# read_xml(path_to_xml_file)
+weather <- read_xml("weather.xml")
+```
+
+To test your XPath, use `xml_find_all()`.  The `text()` at the end grabs the text nodes.
+```{r}
+# xml_find_all(xml_doc, xpath)
+xml_find_all(weather, "/current_observation/latitude/text()")
+xml_find_all(weather, "//latitude/text()")
+```
+
+We'll go over the package in more detail tomorrow.  Today, let's just focus on understanding XML structure and XPath syntax.
+
+## Basic XPath
+
+Write XPaths that:
+
+1. Get the contents of the attribute `name`.
+```{r, eval = FALSE}
+<document name="lab15" />
+```
+
+```{r}
+lab15<- read_xml("lab15.xml")
+xml_attr(lab15,"name")
+```
+
+
+2. Select all document elements beneath the node `linkList` with the name `A`.
+```{r, eval = FALSE}
+<document xmlns:xlink="http://www.w3.org/1999/xlink">
+  <linkList name="A">
+    <document xlink:href="15024" />
+    <document xlink:href="15028" />
+  </linkList>
+  <linkList name="B">
+    <document xlink:href="15030" />
+    <document xlink:href="15032" />
+  </linkList>
+</document>
+```
+
+```{r}
+Linklist<-read_xml("LinkList.xml")
+xml_find_all(Linklist,"//linkList[@name='A']/document/")
+```
+
+3. Select all jobs with `priority` corresponding to "critical" or "high".
+```{r, eval = FALSE}
+<jobs>
+  <job priority="critical" name="finish project" />
+  <job priority="low" name="clear rubbish" />
+  <job priority="low" name="pet cat" />
+  <job priority="medium" name="eat" />
+  <job priority="high" name="make phone call" />
+</jobs>
+```
+
+```{r}
+jobs<-read_xml("jobs.xml")
+xml_find_all(jobs,"/jobs/job[@priority='critical' or @priority='high']")
+```
+
+
+4. Select all persons older than 25
+```{r, eval = FALSE}
+<persons>
+  <person firstName="Renan" lastName="Pazinni" age="28" />
+  <person firstName="Richard" lastName="Wang" age="20" />
+  <person firstName="Catherine" lastName="Ladha" age="24" />
+  <person firstName="Trammy" lastName="Burgess" age="27" />
+</persons>
+```
+
+```{r}
+persons<-read_xml("persons.xml")
+xml_find_all(persons,"//person[@age>'25']")
+```
+
+
+5. Select the names of the artists of every CD.
+
+```{r, eval = FALSE}
+<collection>
+  <artist>
+    <name>Maroon 5</name>
+    <cds>
+      <cd>V</cd>
+      <cd>It won't be soon before long</cd>
+    </cds>
+  </artist>
+  <band>
+    <name>TaeYang</name>
+    <cds>
+      <cd>Rise</cd>
+    </cds>
+  </band>
+  <band>
+    <name>Uniq</name>
+    <cds>
+      <cd>EOEO</cd>
+    </cds>
+  </band>
+  <artist>
+    <name>Michael Jackson</name>
+    <mvs>
+      <mv>Bad</mv>
+      <mv>Thriller</mv>
+    </mvs>
+  </artist>
+</collection>
+```
+
+```{r}
+artist<- read_xml("artist.xml")
+xml_find_all(artist,"//cds/../name/text()")
+```
+
+
+## XPathing
+
+The next five questions refer to the document below.  You may want to draw out the document tree.  Experiment! Do comparisons like =, <, etc. need strings or values? Write XPaths that:
+
+```{r bookstore, eval = FALSE}
+<?xml version="1.0" encoding="UTF-8"?>
+
+<bookstore>
+
+<book category="children">
+  <title lang="fr">Le Petit Prince</title>
+  <author>Antoine de Saint-Exupéry</author>
+  <year>1943</year>
+  <price>10.00</price>
+</book>
+
+<book category="children">
+  <title lang="en">Harry Potter and the Half-Blood Prince</title>
+  <author>J K. Rowling</author>
+  <year>2005</year>
+  <price>29.99</price>
+  <pages>652</pages>
+</book>
+
+<book category="web">
+  <title lang="en">XQuery Kick Start</title>
+  <author>James McGovern</author>
+  <author>Per Bothner</author>
+  <author>Kurt Cagle</author>
+  <author>James Linn</author>
+  <author>Vaidyanathan Nagarajan</author>
+  <year>2003</year>
+  <price>49.99</price>
+</book>
+
+<book category="kindle">
+  <title lang="en">A Game of Thrones</title>
+  <author>George R. R. Martin</author>
+  <year>1996</year>
+  <price>16.95</price>
+  <pages>694</pages>
+</book>
+
+</bookstore>
+```
+
+```{r}
+bookstore<-read_xml("bookstore.xml")
+```
+
+
+6.  Select the prices of all the books.
+```{r}
+xml_find_all(bookstore,"/bookstore/book/price/text()")
+```
+
+
+7.  Select books that are available on the web or on kindles.
+```{r}
+xml_find_all(bookstore,"//book[@category='web'or @category='kindle']")
+```
+
+8.  Select books that have page numbers available.
+```{r}
+xml_find_all(bookstore,"//pages/..")
+```
+
+
+9.  Select the titles of books priced under $20.
+```{r}
+xml_find_all(bookstore,"//book[price<'20']/title/text()")
+```
+
+10. Select the authors of books that aren't written in English.
+
+```{r}
+xml_find_all(bookstore,"//title[@lang!='en']/../author/text()")
+```
+

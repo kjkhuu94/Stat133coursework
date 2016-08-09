@@ -1,0 +1,150 @@
+---
+title: "lab3"
+author: "Kevin Khuu"
+date: "June 8, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Importing the Data
+Run install the package `readr` by running `install.packages("readr")` in the console.
+
+The code below reads in the `tents.csv` comma-separated file.  The `col_types` argument is telling `R` what the data type is in each column.  See `?read_csv` if you're curious.
+```{r}
+library(readr)
+tents <- read_csv("tents.csv", col_types = "ccnniccc")
+```
+
+### Questions
+Answer the following questions programatically.  Some questions ask for you to explain what you see---you may answer this as text outside a code block.
+
+1. Run `str()` on `tents`.  What information does it tell you? This is a useful function to know.
+```{r}
+str(tents)
+```
+I think that the str() gives you the structure of the input.
+
+2. What class is `tents`?
+```{r}
+class(tents)
+```
+Class is either a dataframe,tbl or tbl_df.
+
+3. How many rows are in `tents`?
+```{r}
+nrow(tents)
+```
+There are 90 rows in 'tents'
+
+4. How many columns are in `tents`?
+```{r}
+ncol(tents)
+```
+There are 8 columns or variables in 'tents'
+
+5. What are the names of the columns?
+```{r}
+names(tents)
+```
+6. Display the first 5 rows.
+
+```{r}
+tents[1:5,]
+```
+
+7. Display the last 4 rows.
+
+```{r}
+tents[87:90,]
+```
+
+8. Find out how to use `quantile` to find the interquartile range (75th percentile - 25th percentile) of the weights of the tents.
+
+```{r}
+quantile(tents$weight,prob=.75)-quantile(tents$weight,prob=.25)
+```
+
+9. Find the standard deviation of the heights of the `tents`. Does `R` use `n` or `n-1` in the denominator when calculating standard deviation?
+
+```{r}
+sd(tents$height)
+help(sd)
+```
+
+R uses denominator n-1
+
+10. The weight is given in grams.  Add a new column to the data frame called `weight_lbs` that contains the weight of the tents in pounds.  Remember to overwrite `tents` with your update.
+
+```{r}
+tents$weight_lbs<- round(tents$weight*0.00220462,2)
+```
+
+11. The height is given in centimeters.  Add a new variable `height_in` to the data frame that contains the height of the tents in inches. Remember to overwrite `tents` with your update.
+
+```{r}
+tents$height_in<- round(tents$height*0.393701,2)
+```
+
+12. How many tents cost more than $400?
+
+```{r}
+tents_more_400<- subset(tents,tents$price>400)
+length(tents_more_400$price)
+```
+
+13. Subset the data frame so that it only contains tents that are valued $300 or less.  Assign the subsetted data frame the name `so_cheap_tents`.
+
+```{r}
+so_cheap_tents<- subset(tents,tents$price<300)
+```
+
+14. Of the tents that are more than $300, what percent are `big-agnes` tents?
+
+```{r}
+tents_more_300<- subset(tents, tents$price>300)
+(sum(tents_more_300$brand=='big-agnes')/length(tents_more_300$brand))*100
+```
+
+15. Select the `bestuse` column of `tents` in four different ways: using `$`, `[[]]`, position number and `[]`, and variable name and `[]`.
+
+```{r}
+tents$bestuse
+tents[["bestuse"]]
+tents[6]
+tents["bestuse"]
+```
+
+16. What is the name of the tend with the best height-to-weight ratio?
+
+```{r}
+tents$name[which.max(tents$height/tents$weight)]
+```
+
+17. Run `table` with two arguments, `seasons` and `capacity` (this should be one table).  What did it do?
+
+```{r}
+table(tents$season,tents$capacity)
+```
+
+It returns a contingency table of the seasons and capacity columns.
+
+18. What type of tent (bestuse) is the most common? Your answer should return only the use and not the count.
+
+```{r}
+names(sort(table(tents$bestuse),decreasing=TRUE))[1]
+```
+
+19. Create a data frame called `kelty` with only data on kelty tents.  Do the same for `big-agnes`.  Then, combine the two data frames.
+
+```{r}
+kelty<- subset(tents,tents$brand=='kelty')
+big_agnes<- subset(tents,tents$brand=='big-agnes')
+combined_tents<-rbind(kelty,big_agnes)
+combined_tents
+```
+
+
+

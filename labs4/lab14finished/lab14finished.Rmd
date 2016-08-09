@@ -1,0 +1,102 @@
+---
+title: "lab14finished"
+author: "Kevin Khuu"
+date: "June 29, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include = FALSE}
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(stringr)
+library(ggrepel)
+library(gridExtra)
+library(grid)
+economist <- read_csv("EconomistData.csv")[-1]
+economist
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r}
+ggplot(economist,aes(CPI,HDI,color=Region))+geom_point()
+```
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+ggplot(economist,aes(CPI,HDI))+geom_point(aes(color=Region))+geom_smooth(method=lm,formula=y ~ log(x),se=FALSE)
+```
+
+```{r}
+points_to_label <- c("Russia", "Venezuela", "Iraq", "Myanmar", "Sudan","Afghanistan", "Congo", "Greece", "Argentina", "Brazil","India", "Italy", "China", "South Africa", "Spain","Botswana", "Cape Verde", "Bhutan", "Rwanda", "France","United States", "Germany", "Britain", "Barbados", "Norway", "Japan", "New Zealand", "Singapore")
+filtered_econ<-economist %>% 
+  filter(Country%in%points_to_label)
+```
+
+```{r}
+saved_plot<- ggplot(economist,aes(CPI,HDI))+geom_point(aes(color=Region),shape=1,size=3.5,stroke=2)+geom_smooth(method=lm,formula=y~log(x),se=FALSE)+geom_text_repel(data=filtered_econ,label=filtered_econ$Country,color="gray20")
+```
+
+
+```{r}
+saved_plot<- saved_plot+xlab("Corruptions Perceptions Index, 2011 (10=least corrupt)")+ylab("Human Development Index, 2011(1=Best)")
+saved_plot<-saved_plot+ggtitle("Corruption and Human Development")
+saved_plot
+```
+
+```{r}
+```
+
+```{r}
+saved_plot<- saved_plot+scale_x_continuous(limits=(c(1,10)),breaks=1:10)+scale_y_continuous(breaks=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0),limits=c(0.2,1.0))
+saved_plot
+```
+
+
+Scale_color_manual
+```{r}
+saved_plot<- saved_plot+scale_color_manual(values=c("#099DD7", "#28AADC","#24576D","#248E84","#F2583F", "#96503F"))
+saved_plot
+```
+
+Moving the legend
+```{r}
+saved_plot<-saved_plot+theme(legend.position="top",legend.direction="horizontal")
+saved_plot
+```
+
+
+```{r}
+saved_plot<- saved_plot+theme(axis.ticks.y=NULL,axis.line.y=NULL,text = element_text(color = "gray20"),legend.justification = 0.1,legend.text=element_text(size = 11, color = "gray10"),axis.text = element_text(face = "italic"),axis.title.x = element_text(vjust = -1),axis.title.y = element_text(vjust = 2),axis.line = element_line(color = "gray40", size = 0.5),panel.grid.major = element_line(color = "gray50", size = 0.5),panel.grid.major.x = element_blank() )
+saved_plot
+
+```
+
+```{r}
+text = element_text(color = "gray20")
+legend.justification = 0.1 
+legend.text=element_text(size = 11, color = "gray10")
+axis.text = element_text(face = "italic")
+axis.title.x = element_text(vjust = -1) # move title away from axis
+axis.title.y = element_text(vjust = 2) # move title away from axis # move away for axis
+axis.line = element_line(color = "gray40", size = 0.5)
+panel.grid.major = element_line(color = "gray50", size = 0.5)
+panel.grid.major.x = element_blank()
+```
+
+```{r}
+p<- saved_plot
+footnote <- "Sources: Transparency International; UN Human Development Report"
+footgrob <- textGrob(footnote, x = 0, hjust = -0.1, vjust=0.1, gp = gpar(fontface = "italic", fontsize = 12))
+g <- arrangeGrob(p, bottom = footgrob)
+grid.draw(g)
+```
+

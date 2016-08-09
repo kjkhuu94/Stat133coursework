@@ -1,0 +1,215 @@
+---
+title: "Good Coding Practices"
+author: "Andrew Do"
+date: "July 12, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+sol = TRUE
+```
+
+```{r}
+library(dplyr)
+```
+
+## Short Exercises
+Rewrite the following according to our class style guide:
+
+1.
+```{r, eval = FALSE}
+x < - c( NA,1,-2,3,-4,5 )
+  y <- 3
+  y <- x * - 1
+  y [ y>0 ]
+```
+
+```{r, echo = sol}
+x <- c( NA,1,-2,3,-4,5 )
+  y <- 3
+  y <- x * - 1
+  y [ y>0 ]
+```
+
+2. 
+```{r}
+mean <- function(x) {
+sum (x)/length( x )
+}
+```
+
+```{r, echo = sol}
+Mean <- function(x){
+sum (x)/length( x )
+}
+```
+
+3. 
+```{r}
+library( ggplot2 )
+second_version_of_mpg <- mpg[ mpg$cyl == 6,]
+second_version_of_mpg$class <- as.character(second_version_of_mpg$class)
+ggplot(data=second_version_of_mpg,aes(cty,hwy,color=class))+geom_point()+geom_smooth( method = "lm", se=FALSE ) + labs (title="City vs. Highway MPG" )
+```
+
+```{r, echo = sol}
+mpg_6_cylinders <- mpg[ mpg$cyl == 6,]
+mpg_6_cylinders$class <- as.character(second_version_of_mpg$class)
+ggplot(data=mpg_6_cylinders,aes(cty,hwy,color=class))+
+  geom_point()+
+  geom_smooth( method = "lm",
+               se=FALSE ) + 
+  labs (title="City vs. Highway MPG" )
+```
+
+## Longer Exercises
+
+Fix the following code with the following goals:
+
+* Readability - an untrained person should be able to guess what's going on
+    + Use meaningful names
+    + Use whitespace to make the code flow
+    + Provide documentation
+    + Use functions from the packages we've covered (they're designed to be readable!)
+  
+* Compactness - do not be more verbose than you have to be
+    + Think of ways to vectorize the function
+    + Avoid copy-paste
+    + Use the `lapply` family
+    + Modularize your code (small functions instead of massive ones)
+  
+* Usable as intended
+    + If necessary, include error messages
+    + Don't force the user to rely on implicit coercion
+    + Output the intentional data type
+
+### Exercise 1
+Infer what the function `d` is doing and rewrite it according to our class style guide.  Include documentation so that future users won't have to decipher the code.
+```{r}
+
+d <- function(f, x, y, s) {
+  stuff<-seq(x,y,by=s)
+  stuff2<-c()
+  for(i in 1:length(stuff)){thing<-f(stuff[i]); stuff2[i]<-thing}
+  m<-max(stuff2)
+  mm<-stuff[stuff2==m]
+  mm<-min(mm)
+  return(list(m,mm))
+}
+
+# Example usage
+g <- function(x) -(x ^ 2)
+d(g, -1, 1, .1)
+```
+
+```{r, echo = sol}
+MapFunction <- function(f, x, y, s) {#Is this a Map function?
+  sequence_from_x_to_y<-seq(x,y,by=s)#sequence
+  stored_vector_for_map<-c()#empty vector
+  for(i in 1:length(sequence_from_x_to_y)){#for loop
+     mapped_item<- f(sequence_from_x_to_y[i])
+     stored_vector_for_map[i]<- mapped_item
+     }#Maps the function from stuff, and puts the mapped output into the empty vector
+  max_mapped_vector<- max(stored_vector_for_map)#returns the max of the stored_mapped_items
+  index_vector<- sequence_from_x_to_y[stored_vector_for_map==max_mapped_vector]#returns the index from the original sequence of the map item
+min_index<- min(index_vector)#
+  return(list(max_mapped_vector,index_vector))#returns a list of the above functions
+}
+
+# Example usage
+g <- function(x) -(x ^ 2)
+MapFunction(g, -1, 1, .1)
+```
+
+
+### Exercise 2
+Figure out what the `ss` function is doing, rewrite it so it uses more expressive functions according to our style guide.  Provide documentation.
+```{r}
+ss <- function(x) 
+{x<-x[!is.na(x)]#returns the input x with all of the NA values removed.
+a<-x[1];for(i in 2:length(x)) a[i]<-(a[i-1]+x[i])#the first item of the new vector x
+a<-a/(1:length(x))#divides every element in the list by ???
+foo<-x#creates a mirror of x in another variable
+cc<-0
+for(i in 1:length(foo)){x<-foo[1:i]
+c<-sort(x);
+if(length(x)%%2==0){cc[i]<-(c[floor((length(c)+1)/2)] + c[ceiling((length(c)+1)/2)])/2} else{ cc[i]<-c[(length(c)+1)/2]}}
+return(list(a,cc))
+}
+
+# Example usage
+ss(c(5,10,15,20,5,10,15,20))
+ss(1:10)
+ss(c(1,2,6,2,4,5))
+```
+
+```{r, echo = sol}
+ss <- function(vector) 
+{vector<-vector[!is.na(vector)]#returns the input x with all of the NA values removed.
+first_item_vector<-vector[1];#the first item of the new vector x
+for(i in 2:length(vector))
+  { first_item_vector[i]<-(first_item_vector[i-1]+vector[i])
+  }#for every 2nd item after.
+first_item_vector<-first_item_vector/(1:length(vector))#divides every element in the list by ???
+vector_copy<-vector #creates a mirror of x in another variable
+cc<-0 #This is a bagel of the highest quality
+for(i in 1:length(vector_copy)){vector <- vector_copy [1:i]}#
+sorted_vector<-sort(vector)#the sorted vector of x;
+if(length(vector)%%2== 0)
+  {cc[i]<- (sorted_vector[floor((length(sorted_vector) + 1) / 2)] + 
+             sorted_vector[ceiling((length(sorted_vector)+1)/2)])/2}#takes the median of vector c if length is even
+  else{ cc[i]<-vector[(length(vector)+1)/2]}#takes the median of vector c if length is odd
+return(list(first_item_vector,cc))
+}
+
+# Example usage
+ss(c(5,10,15,20,5,10,15,20))
+ss(1:10)
+ss(c(1,2,6,2,4,5))
+```
+
+### Exercise 3
+Rewrite the following script in a more compact form using packages we've covered in this class.  It shouldn't take more than 7 function calls---3 if you took the time to read the `dplyr` vignette!
+```{r}
+d<-iris
+dd<-unique(d[,5])
+d1<-d[which(d[,5]==dd[1]),]
+d2<-d[which(d[,5]==dd[2]),]
+d3<-d[which(d[,5]==dd[3]),]
+d1[,1] <- mean(d1[,1])
+d1[,2] <- mean(d1[,2])
+d1[,3] <- mean(d1[,3])
+d1[,4] <- mean(d1[,4])
+d2[,1] <- mean(d2[,1])
+d2[,2] <- mean(d2[,2])
+d2[,3] <- mean(d2[,3])
+d2[,4] <- mean(d2[,4])
+d3[,1] <- mean(d3[,1])
+d3[,2] <- mean(d3[,2])
+d3[,3] <- mean(d3[,3])
+d3[,4] <- mean(d3[,4])
+ddd<-rbind(d1[1,],d2[1,],d3[1,])
+rownames(ddd) <- NULL
+
+```
+
+```{r, echo = sol}
+iris_summary_df<-iris %>% 
+  group_by(Species) %>% 
+  summarise(S_Length=mean(Sepal.Length),S_Width=mean(Sepal.Width),P_Length=mean(Petal.Length),P_Width<-mean(Petal.Width))
+iris_summary_df<- iris_summary_df[c(2,3,4,5,1)]
+```
+
+## Remote Computing Practice
+Upload the `.rmd` file to `Documents/lab19/` on your server account and knit it using the command line. Submit the `.html` file produced by knitting on the server.  Assuming you're in the folder with the markdown file on the server, the command is:
+
+```{sh, eval = FALSE}
+Rscript -e "rmarkdown::render('lab19.Rmd')"
+```
+
+
+```{r, echo = sol}
+sessionInfo()
+```
+

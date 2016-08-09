@@ -1,0 +1,214 @@
+---
+title: "hw7"
+author: "Kevin Khuu"
+date: "Andrew and Cindy stop answering questions 5pm July 27, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(shiny)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(scales)
+library(rvest)
+library(stringr)
+
+```
+
+## Introduction
+
+In a superficial way, this assignment is meant to make sure you're familiar with plotting spatial data.  However, the bulk of your time will most likely be devoted to wrangling and reshaping the data so that it's ready to be graphed.  As we move into the final stretch of the class, the hints will now become more sparse.  As with all the previous homeworks, there's no need to look up fancy packages or techniques.  Everything can be done with the tools we already have unless stated otherwise.
+
+## The Data
+The data are in the form that they were originally collected (except someone was nice enough to gather all the lat/long coordinates of the zip codes for you).
+
+The data come from a Dialect Survey conducted by Bert Vaux.  Some limited information can be found at the original depracated website [http://www4.uwm.edu/FLL/linguistics/dialect/index.html](http://www4.uwm.edu/FLL/linguistics/dialect/index.html).  Although 122 questions were asked in the survey, the subset of the data provided to you only contains answers to the 67 questions that focused on lexical rather than phonetic differences.
+
+There are three files included in this assignment:
+
+* `question_data.Rdata`, an Rdata file containing
+    + `quest.mat` a data frame containing the questions
+    + `all.ans`, a list of data frames containing answers to the questions
+* `lingData.txt`, a space-separated data table where each observation represents a response to the survey
+    + `ID` a unique ID for each participant
+    + `CITY` self-reported city of the participant
+    + `STATE` self-reported state of the participant
+    + `ZIP` self-reported zip code of the participant
+    + `lat/long` coordinates calculated from the center of each zip code
+    + `Q50-Q121` the participant's response to a question.  Some questions are missing in this range.  A value of 0 indicates no response.  Other numbers directly match their corresponding letter e.g. `1` should match with `a`.
+* `lingLocation.txt` an aggregated data set.  The responses from `lingData.txt` were turned into binary responses (e.g. "1 if Participant answered a on question 50 and 0 otherwise").  The data were then binned into 1 degree latitude by 1 degree longitude "squares".  Within each of these bins, the binary response were summed over individuals.
+    + `Cell` a unique ID for each lat/long bin
+    + `Latitude/Longitude` coordinates for the cell
+    + `V4-V471` the number of responses for the corresponding question and answer in the cell.  `V4` corresponds to response `a` to question `50` while `V468` corresponds to answer `g` for question `121` (the very last answer to the last question)
+    
+Note that while the rows represent the same _data_ in `lingData.txt` and `lingLocation.txt`, they are different _observational units_.  For example, say John and Paul take this questionnaire for two questions. The first question has three answer choices and the second question has four answer choices. If John answered A and D and Paul answered B and D, then `lingData` would encode two vectors: `(1, 4)` and `(2, 4)`. If they lived in the same longitude and latitude box, then it would be encoded in `lingLocation` as one vector: `(1, 1, 0, 0, 0, 0, 2)`.
+    
+You'll need `read_delim` from the `readr` package to read in the last two files.  Remember to specify the `delim` argument, which demarcates how fields are separated in the text file.
+
+## Task 0
+Explore and clean the data.  Document what was added/removed, explaining your actions.
+```{r}
+#Wrangling Data for Task 1
+page<-"https://simple.wikipedia.org/wiki/U.S._postal_abbreviations"
+xpath='//*[@id="mw-content-text"]/table'
+state_abbreviations_table<- page %>% 
+  read_html() %>% 
+  html_nodes(xpath = xpath) %>% 
+  .[1] %>% 
+  html_table(fill=TRUE) %>% 
+  as.data.frame() %>% 
+  select(c(1,2)) %>% 
+  slice(c(-1,-2)) 
+names(state_abbreviations_table)=c("STATE","region")
+
+load("question_data.RData")#quest.use and quest.mat
+all_ans<- do.call(rbind,all.ans)
+
+full_question_data<- inner_join(quest.use,all_ans)
+names(full_question_data)<- c("Question_Number","Question","Answer_Letter","Percentage","Answer")
+
+lingData<- read.delim("lingData.txt",sep=" ") %>% #Read the Linguistic Data
+  gather(Question_Number,Answer_Letter,5:71) %>% #all of the questions
+  mutate(Question_Number=as.numeric(str_extract_all(Question_Number,"[0-9]{2}$|[1]{1}[0-9]{2}$"))) %>% 
+  filter(Answer_Letter!=0) %>% 
+  mutate(Answer_Letter=letters[Answer_Letter])
+
+lingLocation<- read.delim("lingLocation.txt",sep=" ")#Read the Aggregated Data set.
+  
+fixTies<-function(x){ #Combine ties
+  str_c(x,collapse="/ ")
+}
+
+full_data<- inner_join(full_question_data,lingData) 
+
+summary_full_data <- full_data %>%
+  filter(STATE %in%state.abb) %>% #Filter out 48 continental U.S. states from the data set
+  group_by(Question_Number,Question, STATE,Answer) %>% 
+  tally %>% 
+  filter(n==max(n)) %>% #Get the most common answer for each question
+  group_by(Question,STATE) %>% 
+  mutate(Answer=fixTies(Answer)) %>% #fix ties by concatenating Answers that are tied.
+  filter(!(STATE %in% c("AK","HI"))) %>% 
+  unique()#remove duplicate rows
+
+states<-map_data("state") %>% 
+  mutate(region=str_to_title(region)) %>% 
+  select(-subregion)#remove unnecessary column
+
+states<-inner_join(states,state_abbreviations_table)
+summary_full_data<-left_join(summary_full_data,states)
+
+write.csv(summary_full_data,"summary_full_data.csv")
+
+#Wrangling Data for Task 2
+Visual_Data<-lingLocation %>% #Select Questions 50-55
+  select(2:28)
+colnames(Visual_Data)<-c("Number_of_People","Latitude","Longitude",
+                     "50.a","50.b","50.c","50.d","50.e","50.f","50.g","50.h","50.i",
+                     "51.a","51.b","51.c","52.a","52.b","52.c",
+                     "53.a","53.b","53.c","54.a","54.b","54.c",
+                     "55.a","55.b","55.c") #Replace the unclear column names
+Visual_Data<- Visual_Data %>% 
+  gather(QuestionAnswer, Number,4:27) %>% 
+  separate(col=QuestionAnswer,into=c("qnum","ans.let"),sep="\\.") %>%#separate needed variables 
+  mutate(qnum=as.numeric(qnum)) 
+quest_and_answer_joined<-left_join(quest.use,all_ans) 
+
+full_vis_data<-left_join(Visual_Data,quest_and_answer_joined) %>% 
+  select(-per)
+
+full_vis_data<- full_vis_data %>% 
+  group_by(Longitude, Latitude, qnum) %>% 
+  filter(Number == max(Number)) %>% #find most common answer for each 1x1 tile
+  mutate(ans=fixTies(ans)) %>% #fix ties
+  unique()
+
+```
+
+## Task 1
+
+Implement a Shiny App that colors a map of the continental US based off the most common answer for each state. The user should be allowed to pick one of the 67 questions from a dropdown menu.  If a state has two or more answers that tied, the map should show the tie as a different color.  A static example with a tie in West Virginia is shown below:
+
+![](plural_you.png)
+
+As with homework 6, include your server and ui code below along with a link to your app on shinyapps.io.
+```{r,eval=FALSE}
+library(shiny)
+summary_full_data=read.csv("summary_full_data.csv")
+
+shinyUI(fluidPage(
+  titlePanel("Plotted Idiosyncracies of American Dialect"),
+  
+  # Sidebar with a slider input for the number of bins
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("Question",
+                  "Choose Question to Inspect:",
+                 choices= as.character(unique(summary_full_data$Question))
+      )),
+      # Show a plot of the generated distribution
+      mainPanel(
+        plotOutput("plot")
+      )
+    )
+))
+```
+
+```{r,eval=FALSE}
+library(shiny)
+library(ggplot2)
+library(dplyr)
+library(scales)
+summary_full_data<- read.csv("summary_full_data.csv")
+
+shinyServer(function(input, output) {
+
+  output$plot <- renderPlot({
+    summary_full_data<- summary_full_data %>%
+      filter(Question %in% input$Question)
+    ggplot(summary_full_data)+
+      geom_polygon(aes(x=long,y=lat,group=group,fill=Answer),color="black") +
+      coord_fixed(1.3)+
+      theme_void()+ggtitle(str_wrap(input$Question,width=60))+
+      scale_fill_discrete(labels= function(x) str_wrap(x,width=20))
+    
+  })
+})
+```
+[Change the url to the link to your app](https://kjkhuu.shinyapps.io/hw_task/)
+
+## Task 2
+
+Make visualization(s) of the `lingLocation` data for two questions that you found interesting.  Remember that each row represents a 1x1 square centered at the given lat/long coordinate.
+
+```{r}
+
+
+Question1Data<-full_vis_data %>% 
+  filter(qnum==51) %>% 
+  filter(Latitude<50,Longitude>-130)
+
+ggplot() + 
+  geom_polygon(data = states, aes(long, lat, group = group), color = "black", fill = "NA") +
+      coord_fixed(1.3) +
+  geom_point(data = Question1Data, aes(Longitude, Latitude, color = ans)) +
+  ggtitle(str_wrap(Question1Data$quest[1], width = 60))+
+  scale_fill_discrete(label = function(x) str_wrap(x, width = 5, height = 10)) +
+  theme_void()
+  
+Question2Data<-full_vis_data %>% 
+  filter(qnum==55) %>% 
+  filter(Latitude<50,Longitude>-130)
+
+ggplot() + 
+  geom_polygon(data = states, aes(long, lat, group = group), color = "black", fill = "NA") +
+      coord_fixed(1.3) +
+  geom_point(data = Question2Data, aes(Longitude, Latitude, color = ans)) +
+  ggtitle(str_wrap(Question2Data$quest[1], width = 40))+#Quest is the whole joined dataframe +
+  scale_fill_discrete(labels = function(x) str_wrap(x, width = 5, height = 10))+
+  theme_void()  
+```
+

@@ -1,0 +1,73 @@
+---
+title: "lab25"
+name: "Kevin Khuu"
+date: "July 26, 2016"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+```
+
+Write a function called `moveCars()` that moves the system one full step; that is, the function should move the red cars east once and the blue cars north once, with red cars going first.
+
+Your function should take the following inputs:
+`m`: a matrix
+
+Your function should return a list containing two elements:
+`m`: an updated matrix
+`not_gridlocked`: a logical value that should be TRUE if the system changed and FALSE if notx`
+
+```{r}
+moveCars<- function(m){
+  original<-m
+  shiftright_index<- c(ncol(m),1:ncol(m)-1)
+  redcars<-m*(m==1)#checks for red cars
+  shiftrightredcars<-redcars[,shiftright_index]
+  blockedcars<-(m!=0)*1
+  m*(m!=1)
+  notblockedcars<-(m==0)*1
+  
+  moveNorth<- function(m){}
+  notgridlocked<- original==final
+  return(list(final,notgridlocked))
+}
+
+```
+
+
+Check:
+```{r,eval=FALSE}
+m <- matrix(c(1,0,0,0,2,1,2,0,0,2,0,1,1,0,1,2,0,1,2,1,0,0,1,1,2), nrow = 5, ncol = 5, byrow = T)
+identical(moveCars(m), list(matrix(c(0,1,0,0,2,1,2,0,0,2,1,1,0,1,0,2,0,1,2,1,0,0,1,1,2), nrow = 5, ncol = 5, byrow = T), TRUE))
+
+m <-  matrix(c(0,1,0,2,1), nrow = 1, ncol = 5, byrow = T)
+identical(moveCars(m), list(matrix(c(1,0,1,2,0), nrow = 1, ncol = 5, byrow = T), TRUE))
+
+m <- matrix(c(2,0,1,2,0), nrow = 5, ncol = 1, byrow = T)
+identical(moveCars(m), list(matrix(c(0,0,1,2,2), nrow = 5, ncol = 1, byrow = T), TRUE))
+```
+
+Now write a function called `initGrid()` that randomizes the initial system.
+
+Your function should take the following inputs:
+`r`: number of rows in the matrix
+`c`: number of columns in the matrix
+`d`: density of the grid 
+
+Your function should return the following:
+`m`: an rxc matrix with entries 0 (no cars), 1 (red cars), or 2 (blue cars)
+
+```{r}
+initGrid<-function(r,c,d){
+  matrix_contents=sample(c(0,1,2),size=r*c,prob=c(1-d,d/2,d/2),replace=TRUE)
+  test_matrix <- matrix(matrix_contents,nrow=r,ncol=c)
+  return(test_matrix)
+}
+```
+
+
+
+
+
+
