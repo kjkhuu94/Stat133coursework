@@ -1,0 +1,26 @@
+{
+  "match":[
+    { 
+      "team": "TLA",
+      "color": "blue", 
+      "roster":[
+        {"champion": "maokai","role": "top"},
+        {"champion": "lee sin", "role": "jungle"},
+        {"champion": "viktor", "role": "middle"},
+        {"champion": "lucian", "role": "marksman"},
+        {"champion": "zyra", "role": "support"}
+        ]
+    },
+    {
+      "team": "C9C",
+      "color": "red", 
+      "roster":[
+        {"champion": "trundle","role": "top"},
+        {"champion": "reksai", "role": "jungle"},
+        {"champion": "twisted fate", "role": "middle"},
+        {"champion": "twitch", "role": "marksman"},
+        {"champion": "braum", "role": "support"}
+        ]
+    }
+  ]
+}
