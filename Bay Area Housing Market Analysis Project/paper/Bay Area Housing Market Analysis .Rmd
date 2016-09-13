@@ -1,0 +1,282 @@
+---
+title: "Bay Area Housing Data Analysis"
+author: "Group 5: Xinhao Li, Kentaro Ino, Yunshan Guo, Kevin Khuu"
+date: "August 9, 2016"
+setspace: doublespacing
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, echo=FALSE}
+library(Quandl)
+library(stringr)
+library(readr)
+library(stringr)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(plyr)
+library(ggplot2)
+library(rvest)
+library(ggmap)
+library(scales)
+library(shiny)
+```
+
+```{r,echo=FALSE}
+bubble_data = read_csv("../clean_data/cleaned_bubble_data.csv")
+map_data = read_csv("../clean_data/cleaned_map_data.csv")
+pop_df = read_csv("../raw_data/popudata.csv") %>% 
+  .[-c(1)] %>% 
+  mutate(county = tolower(county)) %>%
+  mutate(year = year(DATE))
+gdp_df = read_csv("../raw_data/gdppcdata.csv") %>% 
+  .[-c(1)] %>% 
+  mutate(county = tolower(county)) %>%
+  mutate(year = year(DATE))
+colnames(pop_df) = c("Date","Pop","County","year")
+colnames(gdp_df) = c("Date","Income","County","year")
+primary = c("alameda","contra costa","san mateo","marin","napa","sacramento","santa clara","san francisco")
+```
+
+# **Table of Content**    
+
+##**1. Introduction**  
+
+##**2.	Data Collection and Wrangling Process**
+
+* 2.1 Raw Data Collection 
+* 2.2 Aggregation Process
+
+## 3.	Analysis and Data Visualizations  
+
+* 3.1 Identifying major factors affecting housing price
+* 3.2 Comparing and Analyzing Housing Market Trends from the Past Two Decades
+* 3.3 Special Case Analysis
+* 3.4 Bubble App
+
+## 4.	Limitations and Further Questions: 
+
+## 5. Conclusion
+
+
+# **1. Introduction**
+
+Housing is a necessity for all individuals. Substantial variation exists across neighborhoods in the type of housing available, the quality of public services, the level of tax burdens, and the quality of life. Consequently, prospective buyers/renters must confront important tradeoffs between different types of housing, neighborhood characteristics, and commute times when choosing suitable housing. Since housing expenditures are a large component of every household's budget, the availability of housing and its price assume considerable importance to a household's livelihood.
+
+Our research is intended to present housing market conditions and trends in the San Francisco Bay Area in the context of historic economic events such as the Dot Com Boom, the Great Recession, and the more recent Tech Boom. Specifically, this research aims to identify changes in the housing market in terms of significant characteristics of housing and their corresponding effect on home values. After collecting a large set of relevant data from sources, we focused our analysis on three different parts of the housing market: the major growth tendency of housing prices prominent in each county, the difference in housing prices between different counties, and the relationship between population and income averages and housing prices. With this analysis, we could clearly and comprehensively map the housing environment of the Bay Area. Housing market conditions could then be a good metric to extrapolate the health of the Bay Area economy.
+
+We surveyed several websites which contained straightforward housing price information on specific locations such as Zillow,Homefinder and Trulia. However, these sites only recorded a limited, non-representative amount of data and would've taken too much time to manually extract and clean. Fortunately, through our chosen research method, we manage to glean a substantial amount of housing data from each of our chosen counties to precisely capture the average housing price for each county, presenting an overview of residential markets in the Bay Area. 
+
+#2. Data Collection and Wrangling process
+
+##2.1 Raw Data Collection
+
+We collected our data through Quandl, a search engine primarily for numerical data, which offered access to several million financial, economic and social datasets We used the Housing API to glean housing data from Zillow and Economic data from the Federal Reserve Economic Data. By inputting the code indicating the area category and area code number for the relevant US counties, Quandl compiled a dataset containing all of the included area categories and code numbers. In order to obtain a large representative sample size in a timely manner, instead of manually inputting codes, we constructed a lookup code script only selecting the information about the Bay Area to do a loop for searching and avoid repeating the input process. Similarly, we used the same technique to obtain GDP and population growth data on Bay Area. We also included Sacramento County as a foil to Bay Area counties to see if trends from certain economic events were also replicated on any scale outside the Bay Area.
+
+Below is a sample of raw data obtained from Quandl.
+_Value stands for the value of the variable Type._ 
+_Type A stands for average price for all homes)_
+```{r,echo=FALSE}
+raw_pricing_data=read_csv("../raw_data/pricing_by_city.csv")
+head(raw_pricing_data)
+```
+
+##2.2 Aggregation Process 
+
+Since we wanted to present the growth tendency of the Bay Area housing market during the past two decades, we inner joined all the separate datasets by year and county to create a master data file containing all of the relevant housing data needed to conduct our analysis.
+
+_Below is a sample cleaned data (twoB stands for the average price of two bedroom properties for that specific county, while threeB stands for the average price of three bedroom properties)_
+
+_Population is in thousands_
+
+```{r,echo=FALSE}
+head(map_data)
+```
+#3. Analysis and Data Visualization
+
+##3.1 Identifying Major Factors Affecting Housing Price
+
+*I.Home Foreclosure Rates
+
+Home Foreclosure Rates are an important factor in reflecting the health of housing markets, and the general economy, as mortgage-backed securities are prominent goods in the financial market. We can see that home foreclosure rates remained relatively low and stable up until the 2008 Recession. This spike happens to coincide with the end of two-year teaser rates for Adjustable Rate Mortgages signed in 2005, leading to massive increases in rent and consequently, default rates. Fortunately,Home foreclosure rates for every county have since lowered sigficantly from their Great Recession numbers. We picked plots of Alameda, San Mateo, and Sacramento county to show the similarity of such a trend, despite location in proximity to Silicon Valley. However, we can see that home foreclosure rates were much lower in San Mateo than Alameda or Silicon Valley during the Great Recession, suggesting that higher-income counties were not as affected as lower income counties.
+
+```{r,echo=FALSE,message=FALSE}
+Foreclosure_test_data=filter(bubble_data,Type=='HF')
+foreclosure_plt=list()
+for(i in 1:length(primary)){
+  temp = ggplot(filter(Foreclosure_test_data,County == primary[i]),aes(x=Date,y=Value,color=City)) +
+    geom_smooth() +
+    geom_line()+
+    labs(title="Foreclosure Rate", x = "Date",y ="Foreclosure Rate per 10,000 Homes")
+  foreclosure_plt[[i]] = temp
+}
+names(foreclosure_plt)=primary
+foreclosure_plt[[1]]
+```
+
+```{r,echo=FALSE}
+foreclosure_plt[[3]]
+```
+
+```{r,echo=FALSE}
+foreclosure_plt[[6]]
+
+```
+
+
+* II. Price to Rent Ratio
+
+Price-to-Rent Ratio(or PRR) is another important factor.  A price-to-Rent Ratio of a property is the value of the property divided by the annual rent that could be gained by that property.  A high Price-to-Rent Ratio is an indication that it is better to rent a property than to buy it.  The Bay Area has always had a higher price-to-rent ratio relative to the U.S. average, which is 19. Silicon Valley counties and San Francisco have higher than average Price-to-Rent Ratios with average PRR ratios in the East Bay and Sacramento lower than the national average.  However, Price-to-Rent-Ratio just measures the relative cost/benefit between buying or renting a property and nothing about the absolute cost of living in the Bay Area, which is still one of the highest in the country.This data is of Alameda,San Mateo and Sacramento county for similar reasons to the Home Foreclosure analysis.
+
+```{r,echo=FALSE}
+PRR_data = filter(bubble_data,Type == 'PRR')
+Price_to_Rent_plt = list()
+for(i in 1:length(primary)){
+  temp = ggplot(filter(PRR_data,County == primary[i]),
+                aes(x=Date,y=Value,color=City)) +
+    geom_smooth() +
+    geom_line()+
+    labs(title="Price-to-Rent Ratio", x = "Date",y ="Price-to-Rent Ratio")
+  Price_to_Rent_plt[[i]] = temp
+}
+Price_to_Rent_plt[[1]]
+```
+
+```{r,echo=FALSE}
+Price_to_Rent_plt[[3]]
+```
+
+```{r,echo=FALSE}
+Price_to_Rent_plt[[6]]
+```
+
+
+
+
+## 3.2 Comparing and Analyzing Housing Market Trends from the Past Two Decades
+
+###Shiny Map Application(https://jeromexlee.shinyapps.io/map_graph/)
+
+
+Use the Shiny App above to find plots depicting the average price of ALL homes in each different county, selected by specific years to show the historical economic events and their effect on the housing market. Change the factor to "A" which represents the average prices of all homes to follow closely with the analysis in "General Trends"
+
+###General Trends
+
+From 1990 to 1995, housing prices moved significantly. They increased dramatically during the Dot Com Boom before dropping immensely during the Great Recession. However, we can observe that housing prices have recovered and even surpassed pre-Great Recession levels by 2014.
+
+When analyzing the present Bay Area housing market, one of the more intuitive questions that an individual might ponder is: Which counties are the most expensive to live in? Before using real data to illustrate, an individual might suspect that San Francisco and Santa Clara would have higher average incomes and property values than counties in the North and East Bay, given the Tech Boom’s concentration around Silicon Valley.
+
+Housing data of each county on specific year was plotted as a map to visualize the price distribution of all homes between different counties. The result mainly confirmed the previous assumption: Santa Clara county contains the most valuable properties followed by San Francisco, San Mateo and Marin, East Bay counties, and Sacramento. Location is a good causal link for this analysis as Silicon Valley has always been the Mecca of Technology and it’s no surprise that closer proximity to Silicon Valley is linked with higher property values.
+
+
+As shown in the Map-App, Santa Clara and Marin counties had the most valuable homes during the 1990s. As time passed, housing prices in Marin County maintained their high values. However, Santa Clara county housing prices have experienced great fluctuation during the past two decades. Santa Clara county dropped from the top position during the Great Recession and has only recently retained its top position, as a result of the Tech Boom.
+
+##3.3 Special Case Analysis
+
+In this section, we analyze Population and Income trends in the Bay Area and Sacramento and then see how these trends in these factors are reflected in their respective housing markets.
+
+```{r,echo=FALSE,message=FALSE}
+CPIpage="http://www.usinflationcalculator.com/inflation/consumer-price-index-and-annual-percent-changes-from-1913-to-2008/"
+xpath='//*[@border=0]'
+CPITable<- CPIpage %>% 
+  read_html() %>% 
+  html_nodes(xpath=xpath) %>% 
+  .[1] %>% 
+  html_table(fill=TRUE) %>% 
+  as.data.frame() %>% 
+  slice(c(-1,-2)) %>% 
+  select(1,14)
+  gdp_df = read_csv("../raw_data/gdppcdata.csv") %>% 
+  .[-c(1)] %>% 
+  mutate(county = tolower(county))
+gdp_df=mutate(gdp_df,year=year(DATE))
+colnames(gdp_df) = c("Date","Income","County","year")
+
+colnames(CPITable)=c("year","CPI_Average")
+CPITable <- CPITable %>% 
+  mutate(year=as.numeric(year),CPI_Average=as.numeric(CPI_Average)) %>% 
+  mutate(Inflation_Ratio_2000=CPI_Average/CPI_Average[which(year=="2000")])
+joined_CPI_gdp<-left_join(gdp_df,CPITable) %>% 
+  mutate(Real_Income=Income/Inflation_Ratio_2000)
+
+```
+
+
+```{r,echo=FALSE}
+pop_plt = ggplot(pop_df,aes(x=Date,y=Pop,color=County)) +
+  geom_smooth() +
+  geom_line() + 
+  labs(title="Population VS. Year", x = "Year(s)",y ="Population(thousand)") +
+  scale_x_date(breaks = date_breaks("5 years"), date_labels = "%Y")
+pop_plt
+```
+We can see that Population has risen in the East Bay and Silicon Valley areas, while remaining stagnant for Napa,Sacramento and most interestingly, Marin county.
+
+```{r,echo=FALSE}
+gdp_plt = ggplot(gdp_df,aes(x=Date,y=Income,color=County)) +
+  geom_smooth() +
+  geom_line() + 
+  labs(title="Income VS. Year", x = "Year(s)",y ="Income per Capita (dollar)") +
+  scale_x_date(breaks = date_breaks("5 years"), date_labels = "%Y")
+gdp_plt
+```
+
+As we can see there has been a sizeable growth in average income across all counties in the Bay area since the 1970s,including heavy growth over the past few years after the recession and during the Tech Boom. However, this picture does not take into account factors such as Inflation and Cost of Living expenses.
+
+```{r,echo=FALSE}
+#Plot of Real Income vs Year, getting rid of the affection of inflation. 
+Real_gdp_plt = ggplot(joined_CPI_gdp,aes(x=Date,y=Real_Income,color=County)) +
+  geom_line() + 
+  labs(title="Real Income VS. Year", x = "Year(s)",y ="Real Income per Capita (dollar)") +
+  scale_x_date(breaks = date_breaks("5 years"), date_labels = "%Y")
+Real_gdp_plt
+```
+
+This is the Real Income graph, which was created by dividing the original income data with the Consumer Price Index for each year of that data. This adjusted income was benchmarked against Year 2000 dollars. 
+
+We can see that average Real Income for most counties have not recovered to their Dot Com Boom levels. Also, given that Income has risen significantly over the past 15 years, why hasn't Real income risen as drastically also? Well, the Consumer Price Index includes Housing costs as one of the many goods in its index.
+
+```{r,echo=FALSE}
+Estimated_Rent_test_data=filter(bubble_data,Type=='RAH')
+Estimated_Rent_plt=list()
+for(i in 1:length(primary)){
+  temp = ggplot(filter(Estimated_Rent_test_data,County == primary[i]),aes(x=Date,y=Value,color=City)) +
+    geom_line()+
+    labs(title="Estimated Rent for All Homes", x = "Date",y ="Estimated Monthly Rent")
+  Estimated_Rent_plt[[i]] = temp
+}
+names(Estimated_Rent_plt)=primary
+Estimated_Rent_plt[[8]]
+```
+
+
+```{r,echo=FALSE}
+Estimated_Rent_plt[[1]]
+```
+
+Estimated rent is one of the most interesting variables to observe in relation to income. We plotted Average Estimated Rent in San Francisco because it has experienced the most meteoritic of rises in  over the last four years, growing from an average of 2500 in 2011 to 4000 in 2014, a 60% rise. You can see the prices of other housing markets in the Bay Area also begin to rise during late 2013-2014. One of the reasons for this is that prospective renters and buyers might have been priced out of the San Francisco market and flowed into other housing markets, increasing the demand in these outside markets and increasing prices.
+
+## 3.4 Bubble_App
+
+_Bubble Data App. This app captures a more intimate picture of the relationships of Population or Income with different Types included from the cleaned bubble Data Set, allowing the user to also observe such trends by county._ 
+
+##Link to Bubble_data App(https://jeromexlee.shinyapps.io/bubble/)
+
+# 4. Limitations and Further Questions:
+
+One glaring omission that readers might notice from this paper is the absence of Santa Clara data from graphs capturing different types of factors including Price-to-Rent Ratio graphs and the Home foreclosure rate graphs. Unfortunately, due to complications from the Quandl API regarding access requests, we had to exclude Santa Clara county data for many of the factors,including home foreclosure rates and estimated rent.
+
+Professor Do suggested that we separate our income data into quintiles, in order to see trends amongst all income brackets. While the overall trend in income was highly positive, he posited that the growth in income for the bottom 80% would've been flat and neglible, with most of the growth being concentrated in the uppermost quintile.  Unfortunately, we could not separate the income dataset accurately into quintiles as our dataset consisted of the average income of cities, not individual incomes within every city. A further search into this question with appropriately cleaned individual income data could be conducted to confirm the Professor’s hypothesis. 
+
+Our datasets are only recent up to 2014 so this we couldn’t analyze whether trends continued or whether they stabilized through 2015.
+
+It remains to be seen whether the high growth seen from both income and housing prices from 2011-2015 was only prevalent in the Bay Area. A further study could be a comparative analysis of whether other tech hubs like Seattle, Portland, New York City, and Austin to see if any of these metropolitan areas achieved the same growth seen in the Bay Area or on any comparable scale.
+
+
+#5. Conclusion
+
+Through statistical analysis of housing datasets, we were able to isolate major factors that mirrored economic trends in the housing market. For example, we were able to capture home foreclosure rates and their trends during the Great Recession. In addition, we were able to see the differences in these trends among different Bay Area counties. One of the more intriguing observations to be taken from this paper is that increases in income in the Bay Area have been met with corresponding increases in housing costs and cost of living, meaning that Real Income has not risen quite as dramatically and has only recently recovered to Dot Com Boom levels for most counties in our sample.
